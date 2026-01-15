@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>ASCII VISUALIZER ⋆𐙚₊˚⊹</h1>
+        <p class="subtitle">convert images into digital text art</p>
+        
+        <form method="post" enctype="multipart/form-data" id="main-form">
+            
+            <input type="hidden" name="image_url" id="url-input">
+
+            <div class="input-group">
+                <input type="file" name="file" id="file-upload" accept="image/*" onchange="updateFileName()">
+                
+                <label for="file-upload" class="custom-file-upload" id="drop-zone">
+                    <span id="file-label"> choose or drop image...</span>
+                </label>
+            </div>
+            
+            <div class="input-group">
+                <input type="number" name="width" value="100" min="20" max="300" placeholder="Width (e.g. 100)" title="Output Width">
+            </div>
+
+            <button type="submit" class="convert-btn">generate art</button>
+        </form>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        {% if ascii_art %}
+            <div class="actions">
+                <button onclick="copyToClipboard()" class="action-btn">copy text</button>
+                <button onclick="downloadText()" class="action-btn">save file</button>
+            </div>
+
+            <div class="result">
+                <pre id="ascii-output">{{ ascii_art }}</pre>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-upload');
+        const urlInput = document.getElementById('url-input');
+        const label = document.getElementById('file-label');
+
+        // drag and drop functionality
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-active');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-active');
+
+            // file from desktop
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                urlInput.value = ""; // Clear URL if file is selected
+                updateLabel("📄 " + fileInput.files[0].name);
+            } 
+            // url from web
+            else {
+                const htmlData = e.dataTransfer.getData('text/html');
+                const urlData = e.dataTransfer.getData('text/uri-list');
+                
+                let src = null;
+
+                // extract image URL
+                if (htmlData) {
+                    // fake element
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlData, "text/html");
+                    const img = doc.querySelector('img');
+                    if (img) src = img.src;
+                } 
+                
+                if (!src && urlData) {
+                    src = urlData;
+                }
+
+                if (src) {
+                    urlInput.value = src; 
+                    fileInput.value = ""; 
+                    updateLabel("web image");
+                }
+            }
+        });
+
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                updateLabel(fileInput.files[0].name);
+            }
+        }
+
+        function updateLabel(text) {
+            label.innerText = text;
+            label.parentElement.classList.add("file-selected");
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById("ascii-output").innerText;
+            navigator.clipboard.writeText(text).then(() => alert("copied!")).catch(console.error);
+        }
+
+        function downloadText() {
+            const text = document.getElementById("ascii-output").innerText;
+            const blob = new Blob([text], { type: "text/plain" });
+            const anchor = document.createElement("a");
+            anchor.href = URL.createObjectURL(blob);
+            anchor.download = "ascii_art.txt";
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+        }
+    </script>
+</body>
+</html>
